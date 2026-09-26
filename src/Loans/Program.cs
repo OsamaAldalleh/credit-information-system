@@ -1,4 +1,4 @@
-using Loans.Data;
+using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

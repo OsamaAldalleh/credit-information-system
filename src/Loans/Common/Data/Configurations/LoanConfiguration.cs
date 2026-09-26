@@ -1,8 +1,8 @@
-using Loans.Models;
+using Loans.Base.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Loans.Data.Configurations;
+namespace Loans.Common.Data.Configurations;
 
 public class LoanConfiguration : IEntityTypeConfiguration<Loan>
 {

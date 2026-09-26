@@ -1,4 +1,4 @@
-namespace Loans.Models;
+namespace Loans.Base.Models;
 
 public class Loan
 {
