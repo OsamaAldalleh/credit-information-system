@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Common.Exceptions.Handlers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +18,7 @@ public static class CommonApiExtensions
                 // Validation errors report JSON names (civil_id) instead of C# names (CivilId).
                 options.ModelMetadataDetailsProviders.Add(new SystemTextJsonValidationMetadataProvider(JsonNamingPolicy.SnakeCaseLower));
             })
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper));
-            })
+            .AddJsonOptions(options => ApiJson.Configure(options.JsonSerializerOptions))
             .ConfigureApiBehaviorOptions(options =>
             {
                 // ValidationFilter and StatusCodeResponseWriter produce these responses in the ApiResponse shape instead.
@@ -32,11 +27,7 @@ public static class CommonApiExtensions
             });
 
         // The exception handlers write JSON outside MVC, which uses these separate options.
-        services.ConfigureHttpJsonOptions(options =>
-        {
-            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper));
-        });
+        services.ConfigureHttpJsonOptions(options => ApiJson.Configure(options.SerializerOptions));
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         // UseExceptionHandler() refuses to start without it; our handler writes the response, so its output is never used.

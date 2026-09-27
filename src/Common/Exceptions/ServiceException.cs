@@ -43,6 +43,9 @@ public sealed class ServiceException : Exception
     public static ServiceException InternalError(ServiceError error, params object?[] args) =>
         new(StatusCodes.Status500InternalServerError, error, args);
 
+    public static ServiceException ServiceUnavailable(ServiceError error, params object?[] args) =>
+        new(StatusCodes.Status503ServiceUnavailable, error, args);
+
     public static ServiceException ValidationFailed(IReadOnlyList<ValidationError> validationErrors) =>
         new(StatusCodes.Status400BadRequest, GenericErrors.ValidationFailed, [], validationErrors);
 
