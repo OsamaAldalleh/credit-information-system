@@ -5,8 +5,8 @@ using Customers.Errors;
 using Customers.Mappers;
 using Customers.Models;
 using Customers.Payloads;
+using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Customers.Services;
 
@@ -22,9 +22,7 @@ public class CustomersService(CustomersDbContext customersDb)
         {
             await customersDb.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (
-            ex.InnerException is PostgresException postgresEx &&
-            postgresEx.SqlState == PostgresErrorCodes.UniqueViolation)
+        catch (UniqueConstraintException)
         {
             throw ServiceException.BadRequest(CustomerErrors.CustomerAlreadyExists, customer.CivilId);
         }

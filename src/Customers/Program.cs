@@ -1,6 +1,7 @@
 using Common.Api;
 using Customers.Data;
 using Customers.Services;
+using EntityFramework.Exceptions.PostgreSQL;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<CustomersDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("CustomersDb"))
-    .UseSnakeCaseNamingConvention());
+    .UseSnakeCaseNamingConvention()
+    .UseExceptionProcessor());
 
 builder.Services.AddCommonApi();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
