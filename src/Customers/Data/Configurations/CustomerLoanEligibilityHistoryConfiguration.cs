@@ -21,6 +21,11 @@ public class CustomerLoanEligibilityHistoryConfiguration : IEntityTypeConfigurat
             .HasMaxLength(32)
             .HasConversion(v => v.ToString().ToUpperInvariant(), v => Enum.Parse<LoanEligibility>(v, true));
 
-        builder.HasIndex(le => new { le.CivilId, le.CreatedAt });
+        builder.HasIndex(le => new
+        {
+            le.CivilId,
+            le.CreatedAt,
+            le.Id
+        });
     }
 }
