@@ -4,6 +4,7 @@ using Loans.Common.Clients.Customers;
 using EntityFramework.Exceptions.PostgreSQL;
 using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
+using Loans.Payments.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,7 @@ builder.Services.AddDbContext<LoansDbContext>(options => options
     .UseSnakeCaseNamingConvention()
     .UseExceptionProcessor());
 
+builder.Services.AddScoped<PaymentsService>();
 builder.Services.AddCommonApi();
 builder.Services.AddOpenApi();
 
