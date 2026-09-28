@@ -6,7 +6,9 @@ public class LoanPayload
 {
     public Guid? Id { get; set; }
     public string? CivilId { get; set; }
-    // todo: name will be other banks for loans belonging to other institution from requesting user.
+    // todo: once auth is done, for loans of another institution than the caller's (non-bureau callers),
+    //       institution_id is null and institution_name is OTHER_BANKS.
+    public Guid? InstitutionId { get; set; }
     public string? InstitutionName { get; set; }
     public string? ExternalReference { get; set; }
     public DateOnly? StartDate { get; set; }

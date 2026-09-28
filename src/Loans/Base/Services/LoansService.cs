@@ -52,6 +52,14 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
         return loan.ToPayload();
     }
 
+    public async Task<LoanPayload> GetLoanAsync(Guid loanId)
+    {
+        var loan = await loansDb.Loans.FindAsync(loanId)
+            ?? throw ServiceException.NotFound(LoanErrors.LoanNotFound, loanId);
+
+        return loan.ToPayload();
+    }
+
     // todo: once auth is done, non-bureau callers see InstitutionId only for their own institution's loans;
     //       every other loan's institution is reported as OTHER_BANKS.
     public async Task<PageResult<LoanPayload>> GetCustomerLoansAsync(string civilId, LoanStatus? status, int page, int pageSize)

@@ -19,6 +19,13 @@ public class LoansController(LoansService loansService) : ControllerBase
         return ApiResponseBuilder.Ok(loan);
     }
 
+    // The guid constraint keeps this route apart from the civil ID routes below.
+    [HttpGet("{loanId:guid}", Name = nameof(GetLoan))]
+    public async Task<ActionResult<ApiResponse<LoanPayload>>> GetLoan(Guid loanId)
+    {
+        return ApiResponseBuilder.Ok(await loansService.GetLoanAsync(loanId));
+    }
+
     [HttpGet("{civilId}")]
     public async Task<ActionResult<ApiResponse<PageResult<LoanPayload>>>> GetCustomerLoans(
         string civilId,
