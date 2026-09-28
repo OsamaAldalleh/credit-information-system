@@ -6,7 +6,8 @@ public class LoanPayload
 {
     public Guid? Id { get; set; }
     public string? CivilId { get; set; }
-    public Guid? InstitutionId { get; set; }
+    // todo: name will be other banks for loans belonging to other institution from requesting user.
+    public string? InstitutionName { get; set; }
     public string? ExternalReference { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? FirstDueDate { get; set; }

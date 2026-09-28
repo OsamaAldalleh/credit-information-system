@@ -17,6 +17,11 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
 
     public async Task<LoanPayload> CreateLoanAsync(CreateLoanPayload payload)
     {
+        if(payload.FirstDueDate < payload.StartDate)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("first_due_date", "first_due_date should be at or after start_date")]);
+        }
         var customer = await customersClient.GetCustomerAsync(payload.CivilId!)
             ?? throw ServiceException.BadRequest(LoanErrors.CustomerNotFound, payload.CivilId);
 

@@ -10,7 +10,6 @@ public static class LoanMapper
     {
         Id = loan.Id,
         CivilId = loan.CivilId,
-        InstitutionId = loan.InstitutionId,
         ExternalReference = loan.ExternalReference,
         StartDate = loan.StartDate,
         FirstDueDate = loan.FirstDueDate,
