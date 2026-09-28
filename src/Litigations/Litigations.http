@@ -1,6 +1,0 @@
-@Litigations_HostAddress = http://localhost:5224
-
-GET {{Litigations_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
