@@ -7,6 +7,12 @@ public static class ApiResponseBuilder
 {
     public static ObjectResult Ok<T>(T body) =>
         new(ApiResponse<T>.Success(body)) { StatusCode = StatusCodes.Status200OK };
+    
+    public static ObjectResult Ok() =>
+      new(ApiResponse<object>.Success(null))
+      {
+          StatusCode = StatusCodes.Status200OK
+      };
 
     public static CreatedResult Created<T>(string location, T body) =>
         new(location, ApiResponse<T>.Success(body));
