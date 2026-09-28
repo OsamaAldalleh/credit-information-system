@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Common.Api.Responses;
+using Loans.Base.Models;
 using Loans.Payments.Payloads;
 using Loans.Payments.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -19,5 +20,46 @@ public class PaymentsController(PaymentsService paymentsService) : ControllerBas
         await paymentsService.UploadPaymentsAsync(loanId, payments);
         return ApiResponseBuilder.Ok();
     }
-    
+
+    [HttpGet("loan/{loanId}")]
+    public async Task<ActionResult<ApiResponse<PageResult<LoanPaymentPayload>>>> GetLoanPayments(
+        Guid loanId,
+        [FromQuery, Range(0, int.MaxValue)] int page = 0,
+        [FromQuery, Range(1, 100)] int pageSize = 20,
+        [FromQuery, RegularExpression("^(asc|desc)$", ErrorMessage = "sort must be asc or desc")] string sort = "desc")
+    {
+        return ApiResponseBuilder.Ok(await paymentsService.GetLoanPaymentsAsync(loanId, page, pageSize, sort));
+    }
+
+    [HttpGet("reference/{paymentReference}")]
+    public async Task<ActionResult<ApiResponse<LoanPaymentPayload>>> GetPaymentByReference(
+        [Required, StringLength(64)] string paymentReference)
+    {
+        return ApiResponseBuilder.Ok(await paymentsService.GetPaymentByReferenceAsync(paymentReference));
+    }
+
+    [HttpGet("{paymentId}")]
+    public async Task<ActionResult<ApiResponse<LoanPaymentPayload>>> GetPayment(Guid paymentId)
+    {
+        return ApiResponseBuilder.Ok(await paymentsService.GetPaymentAsync(paymentId));
+    }
+
+    [HttpGet("customer/{civilId}")]
+    public async Task<ActionResult<ApiResponse<PageResult<LoanPaymentPayload>>>> GetCustomerPayments(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId,
+        [FromQuery, EnumDataType(typeof(LoanStatus))] LoanStatus? loanStatus = null,
+        [FromQuery, Range(0, int.MaxValue)] int page = 0,
+        [FromQuery, Range(1, 100)] int pageSize = 20,
+        [FromQuery, RegularExpression("^(asc|desc)$", ErrorMessage = "sort must be asc or desc")] string sort = "desc")
+    {
+        return ApiResponseBuilder.Ok(await paymentsService.GetCustomerPaymentsAsync(civilId, loanStatus, page, pageSize, sort));
+    }
+
+    [HttpGet("customer/{civilId}/latest")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<LoanPaymentPayload>>>> GetLatestCustomerPayments(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId,
+        [FromQuery, Range(1, 100)] int limit = 5)
+    {
+        return ApiResponseBuilder.Ok(await paymentsService.GetLatestCustomerPaymentsAsync(civilId, limit));
+    }
 }

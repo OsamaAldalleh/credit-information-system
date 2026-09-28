@@ -5,7 +5,9 @@ using Loans.Base.Models;
 using Loans.Common.Data;
 using Loans.Payments.Errors;
 using Loans.Payments.Mappers;
+using Loans.Payments.Models;
 using Loans.Payments.Payloads;
+using Microsoft.EntityFrameworkCore;
 
 namespace Loans.Payments.Services;
 
@@ -32,11 +34,110 @@ public class PaymentsService(LoansDbContext loansDb)
         loansDb.LoanPayments.AddRange(payments.Select(p => p.ToEntity(loan)));
         try
         {
-            await loansDb.SaveChangesAsync();   
+            await loansDb.SaveChangesAsync();
         } 
         catch(UniqueConstraintException)
         {
             throw ServiceException.BadRequest(PaymentErrors.DuplicatePaymentReference);
         }
+    }
+
+    public async Task<PageResult<LoanPaymentPayload>> GetLoanPaymentsAsync(Guid loanId, int page, int pageSize, string sort)
+    {
+        var query = loansDb.LoanPayments
+            .AsNoTracking()
+            .Where(p => p.LoanId == loanId);
+
+        return await GetPaymentsPageAsync(query, page, pageSize, sort);
+    }
+
+    public async Task<LoanPaymentPayload> GetPaymentByReferenceAsync(string paymentReference)
+    {
+        // todo: filter by the authenticated user's institution id once JWT claims are available.
+        var instId = Guid.CreateVersion7();
+        var payment = await loansDb.LoanPayments
+            .AsNoTracking()
+            .Where(p => p.PaymentReference == paymentReference)
+            .Where(p => p.InstitutionId == instId)
+            .SingleOrDefaultAsync();
+
+        if (payment is null)
+        {
+            throw ServiceException.NotFound(PaymentErrors.PaymentReferenceNotFound, paymentReference);
+        }
+
+        return payment.ToPayload();
+    }
+
+    public async Task<LoanPaymentPayload> GetPaymentAsync(Guid paymentId)
+    {
+        var payment = await loansDb.LoanPayments
+            .FindAsync(paymentId);
+
+        if (payment is null)
+        {
+            throw ServiceException.NotFound(PaymentErrors.PaymentNotFound, paymentId);
+        }
+
+        return payment.ToPayload();
+    }
+
+    public async Task<PageResult<LoanPaymentPayload>> GetCustomerPaymentsAsync(
+        string civilId, LoanStatus? loanStatus, int page, int pageSize, string sort)
+    {
+        var query = loansDb.LoanPayments
+            .AsNoTracking()
+            .Where(p => p.CivilId == civilId);
+
+        if (loanStatus is not null)
+        {
+            query = query.Where(p => loansDb.Loans.Any(l => l.Id == p.LoanId && l.Status == loanStatus.Value));
+        }
+
+        return await GetPaymentsPageAsync(query, page, pageSize, sort);
+    }
+
+    public async Task<IReadOnlyList<LoanPaymentPayload>> GetLatestCustomerPaymentsAsync(string civilId, int limit)
+    {
+        var payments = await loansDb.LoanPayments
+            .AsNoTracking()
+            .Where(p => p.CivilId == civilId)
+            .OrderByDescending(p => p.PaymentDate)
+            .ThenByDescending(p => p.Id)
+            .Take(limit)
+            .ToListAsync();
+
+        return payments.Select(p => p.ToPayload()).ToList();
+    }
+
+    private async Task<PageResult<LoanPaymentPayload>> GetPaymentsPageAsync(
+        IQueryable<LoanPayment> query, int page, int pageSize, string sort)
+    {
+        var offset = (long)page * pageSize;
+
+        if (offset > int.MaxValue)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("page", "Requested page is too large.")]);
+        }
+
+        var totalElements = await query.CountAsync();
+
+        var orderedQuery = sort == "asc"
+            ? query.OrderBy(p => p.PaymentDate).ThenBy(p => p.Id)
+            : query.OrderByDescending(p => p.PaymentDate).ThenByDescending(p => p.Id);
+
+        var payments = await orderedQuery
+            .Skip((int)offset)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PageResult<LoanPaymentPayload>
+        {
+            Content = payments.Select(p => p.ToPayload()).ToList(),
+            Page = page,
+            Size = pageSize,
+            TotalElements = totalElements
+        };
     }
 }
