@@ -28,4 +28,16 @@ public class LoansController(LoansService loansService) : ControllerBase
     {
         return ApiResponseBuilder.Ok(await loansService.GetCustomerLoansAsync(civilId, loanStatus, page, pageSize));
     }
+
+    [HttpGet("{civilId}/delinquent")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<DelinquentLoanPayload>>>> GetDelinquentLoans(string civilId)
+    {
+        return ApiResponseBuilder.Ok(await loansService.GetDelinquentLoansAsync(civilId));
+    }
+
+    [HttpGet("{civilId}/next-payment")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<NextPaymentPayload>>>> GetNextPayments(string civilId)
+    {
+        return ApiResponseBuilder.Ok(await loansService.GetNextPaymentsAsync(civilId));
+    }
 }

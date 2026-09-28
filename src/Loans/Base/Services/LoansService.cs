@@ -90,4 +90,60 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
             TotalElements = totalElements
         };
     }
+
+    public async Task<IReadOnlyList<DelinquentLoanPayload>> GetDelinquentLoansAsync(string civilId)
+    {
+        var today = LoanScheduleCalculator.KuwaitToday();
+
+        var loans = await loansDb.Loans
+            .AsNoTracking()
+            .Where(l => l.CivilId == civilId && l.Status == LoanStatus.Open)
+            .Select(l => new { Loan = l, Paid = loansDb.LoanPayments.Where(p => p.LoanId == l.Id).Sum(p => p.Amount) })
+            .ToListAsync();
+
+        return loans
+            .Select(l => (l.Loan, Standing: LoanScheduleCalculator.Calculate(l.Loan, l.Paid, today)))
+            .Where(l => l.Standing.IsDelinquent)
+            .OrderByDescending(l => l.Standing.DaysPastDue)
+            .Select(l => new DelinquentLoanPayload
+            {
+                LoanId = l.Loan.Id,
+                ExternalReference = l.Loan.ExternalReference,
+                InstallmentAmount = l.Loan.InstallmentAmount,
+                OverdueAmount = l.Standing.OverdueAmount,
+                OverdueInstallments = l.Standing.OverdueInstallments,
+                OverdueSince = l.Standing.OverdueSince,
+                DaysPastDue = l.Standing.DaysPastDue,
+                DelinquencyBucket = LoanScheduleCalculator.DelinquencyBucket(l.Standing.DaysPastDue)
+            })
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<NextPaymentPayload>> GetNextPaymentsAsync(string civilId)
+    {
+        var today = LoanScheduleCalculator.KuwaitToday();
+
+        var loans = await loansDb.Loans
+            .AsNoTracking()
+            .Where(l => l.CivilId == civilId && l.Status == LoanStatus.Open)
+            .Select(l => new { Loan = l, Paid = loansDb.LoanPayments.Where(p => p.LoanId == l.Id).Sum(p => p.Amount) })
+            .ToListAsync();
+
+        return loans
+            .Select(l => (l.Loan, Standing: LoanScheduleCalculator.Calculate(l.Loan, l.Paid, today)))
+            .Where(l => !l.Standing.IsSettled)
+            // Loans with no installments left but money still owed have no next date; they are due now, so they come first.
+            .OrderBy(l => l.Standing.NextDueDate ?? DateOnly.MinValue)
+            .Select(l => new NextPaymentPayload
+            {
+                LoanId = l.Loan.Id,
+                ExternalReference = l.Loan.ExternalReference,
+                OverdueAmount = l.Standing.OverdueAmount,
+                OverdueSince = l.Standing.OverdueSince,
+                NextDueDate = l.Standing.NextDueDate,
+                NextInstallmentAmount = l.Standing.NextInstallmentAmount,
+                TotalDueByNextDate = l.Standing.TotalDueByNextDate
+            })
+            .ToList();
+    }
 }
