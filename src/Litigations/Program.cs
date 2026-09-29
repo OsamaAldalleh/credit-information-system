@@ -1,8 +1,10 @@
 using Common.Api;
+using Common.Messaging;
 using EntityFramework.Exceptions.PostgreSQL;
 using Litigations.Clients.Loans;
 using Litigations.Data;
 using Litigations.Services;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,15 @@ builder.Services.AddCommonApi();
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<LitigationsService>();
+
+builder.Services.AddCommonMessaging(builder.Configuration, x =>
+{
+    x.AddEntityFrameworkOutbox<LitigationsDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+});
 
 builder.Services.AddHttpClient<LoansClient>(client =>
 {

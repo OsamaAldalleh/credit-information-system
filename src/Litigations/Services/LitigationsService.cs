@@ -9,45 +9,16 @@ using Litigations.Mappers;
 using Litigations.Models;
 using Litigations.Payloads;
 using Microsoft.EntityFrameworkCore;
+using Common.Contracts;
+using MassTransit;
 
 namespace Litigations.Services;
 
-public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient loansClient)
+public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient loansClient, IPublishEndpoint publishEndpoint)
 {
-    // Court dates are Kuwaiti calendar dates; Kuwait is UTC+3 all year.
-    private static readonly TimeSpan KuwaitOffset = TimeSpan.FromHours(3);
-
     public async Task<LitigationPayload> CreateLitigationAsync(CreateLitigationPayload payload)
     {
-        var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(KuwaitOffset).DateTime);
-        var status = payload.Status ?? LitigationStatus.Pending;
-
-        if (payload.FiledDate > today)
-        {
-            throw ServiceException.ValidationFailed(
-                [new ValidationError("filed_date", "filed_date cannot be in the future")]);
-        }
-        if (status == LitigationStatus.Pending && payload.VerdictDate is not null)
-        {
-            throw ServiceException.ValidationFailed(
-                [new ValidationError("verdict_date", "verdict_date must be empty while the case is PENDING")]);
-        }
-        if (status != LitigationStatus.Pending && payload.VerdictDate is null)
-        {
-            throw ServiceException.ValidationFailed(
-                [new ValidationError("verdict_date", "verdict_date is required for a GUILTY or INNOCENT verdict")]);
-        }
-        if (payload.VerdictDate < payload.FiledDate)
-        {
-            throw ServiceException.ValidationFailed(
-                [new ValidationError("verdict_date", "verdict_date should be at or after filed_date")]);
-        }
-        if (payload.VerdictDate > today)
-        {
-            throw ServiceException.ValidationFailed(
-                [new ValidationError("verdict_date", "verdict_date cannot be in the future")]);
-        }
-
+        ValidateLitigation(payload.Status, payload.FiledDate, payload.VerdictDate);
         var loan = await loansClient.GetLoanAsync(payload.LoanId!.Value)
             ?? throw ServiceException.BadRequest(LitigationErrors.LoanNotFound, payload.LoanId);
 
@@ -60,6 +31,8 @@ public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient 
 
         var litigation = payload.ToEntity(loan);
         litigationsDb.Litigations.Add(litigation);
+        await publishEndpoint.Publish(
+            new CustomerCreditDataChanged(litigation.CivilId, CreditDataChangeReason.LitigationRecorded, DateTimeOffset.UtcNow));
 
         try
         {
@@ -89,7 +62,7 @@ public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient 
             throw ServiceException.BadRequest(LitigationErrors.VerdictAlreadyRecorded, litigationId);
         }
 
-        var today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(KuwaitOffset).DateTime);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         if (payload.Status == LitigationStatus.Pending)
         {
@@ -110,6 +83,8 @@ public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient 
         litigation.Status = payload.Status!.Value;
         litigation.VerdictDate = payload.VerdictDate;
         litigation.UpdatedAt = DateTimeOffset.UtcNow;
+        await publishEndpoint.Publish(
+            new CustomerCreditDataChanged(litigation.CivilId, CreditDataChangeReason.VerdictRecorded, DateTimeOffset.UtcNow));
 
         try
         {
@@ -193,5 +168,37 @@ public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient 
             .Select(l => l.LoanId)
             .Distinct()
             .ToListAsync();
+    }
+
+    private static void ValidateLitigation(LitigationStatus? litigationStatus, DateOnly? filedDate, DateOnly? verdictDate)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var status = litigationStatus ?? LitigationStatus.Pending;
+
+        if (filedDate > today)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("filed_date", "filed_date cannot be in the future")]);
+        }
+        if (status == LitigationStatus.Pending && verdictDate is not null)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("verdict_date", "verdict_date must be empty while the case is PENDING")]);
+        }
+        if (status != LitigationStatus.Pending && verdictDate is null)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("verdict_date", "verdict_date is required for a GUILTY or INNOCENT verdict")]);
+        }
+        if (verdictDate < filedDate)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("verdict_date", "verdict_date should be at or after filed_date")]);
+        }
+        if (verdictDate > today)
+        {
+            throw ServiceException.ValidationFailed(
+                [new ValidationError("verdict_date", "verdict_date cannot be in the future")]);
+        }
     }
 }
