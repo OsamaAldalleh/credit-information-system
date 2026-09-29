@@ -26,6 +26,12 @@ public class LoansController(LoansService loansService) : ControllerBase
         return ApiResponseBuilder.Ok(await loansService.GetLoanAsync(loanId));
     }
 
+    [HttpPatch("{loanId:guid}/close")]
+    public async Task<ActionResult<ApiResponse<LoanPayload>>> CloseLoan(Guid loanId, CloseLoanPayload payload)
+    {
+        return ApiResponseBuilder.Ok(await loansService.CloseLoanAsync(loanId, payload));
+    }
+
     [HttpGet("{civilId}")]
     public async Task<ActionResult<ApiResponse<PageResult<LoanPayload>>>> GetCustomerLoans(
         [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId,

@@ -68,6 +68,26 @@ public class LoansService(
         return loan.ToPayload();
     }
 
+    public async Task<LoanPayload> CloseLoanAsync(Guid loanId, CloseLoanPayload payload)
+    {
+        var loan = await loansDb.Loans.FindAsync(loanId)
+            ?? throw ServiceException.NotFound(LoanErrors.LoanNotFound, loanId);
+
+        if (loan.Status == LoanStatus.Closed)
+        {
+            throw ServiceException.BadRequest(LoanErrors.LoanAlreadyClosed, loanId);
+        }
+
+        loan.Status = LoanStatus.Closed;
+        loan.ClosureReason = payload.ClosureReason;
+        loan.ClosedAt = DateTimeOffset.UtcNow;
+        await publishEndpoint.Publish(
+            new CustomerCreditDataChanged(loan.CivilId, CreditDataChangeReason.LoanClosed, DateTimeOffset.UtcNow));
+        await loansDb.SaveChangesAsync();
+
+        return loan.ToPayload();
+    }
+
     // todo: once auth is done, non-bureau callers see InstitutionId only for their own institution's loans;
     //       every other loan's institution is reported as OTHER_BANKS.
     public async Task<PageResult<LoanPayload>> GetCustomerLoansAsync(string civilId, LoanStatus? status, int page, int pageSize)
