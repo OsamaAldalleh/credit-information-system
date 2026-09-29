@@ -30,6 +30,7 @@ public class CustomersController(CustomersService customersService) : Controller
     }
 
     [HttpPatch("{civilId}/loan-eligibility")]
+    [EndpointDescription("Blocks or unblocks the customer from getting new loans. Every change is kept in the eligibility history.")]
     public async Task<ActionResult<ApiResponse<CustomerPayload>>> UpdateCustomerLoanEligibility(string civilId, UpdateEligibilityPayload payload)
     {
         return ApiResponseBuilder.Ok(await customersService.UpdateCustomerLoanEligibilityAsync(civilId, payload));

@@ -32,7 +32,7 @@ builder.Services.AddHttpClient<LitigationsClient>(client =>
 
 builder.Services.AddScoped<PaymentsService>();
 builder.Services.AddCommonApi();
-builder.Services.AddOpenApi();
+builder.Services.AddCommonOpenApi();
 
 builder.Services.AddScoped<LoansService>();
 

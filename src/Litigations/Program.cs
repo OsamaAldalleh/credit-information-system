@@ -15,7 +15,7 @@ builder.Services.AddDbContext<LitigationsDbContext>(options => options
     .UseExceptionProcessor());
 
 builder.Services.AddCommonApi();
-builder.Services.AddOpenApi();
+builder.Services.AddCommonOpenApi();
 
 builder.Services.AddScoped<LitigationsService>();
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi;
 
 namespace Common.Api;
 
@@ -36,6 +37,24 @@ public static class CommonApiExtensions
         services.AddExceptionHandler<GlobalExceptionHandler>();
         // UseExceptionHandler() refuses to start without it; our handler writes the response, so its output is never used.
         services.AddProblemDetails();
+
+        return services;
+    }
+
+    public static IServiceCollection AddCommonOpenApi(this IServiceCollection services)
+    {
+        services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+        {
+            // The docs are served through the gateway, so "Try it out" must call the gateway, not this service.
+            document.Servers = [];
+            document.Components ??= new OpenApiComponents();
+            document.Components.SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
+            {
+                ["Bearer"] = new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" }
+            };
+            document.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", document)] = [] }];
+            return Task.CompletedTask;
+        }));
 
         return services;
     }

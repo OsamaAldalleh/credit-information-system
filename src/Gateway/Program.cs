@@ -46,6 +46,19 @@ builder.Services.AddReverseProxy().LoadFromMemory(GatewayRoutes.Routes, GatewayR
 var app = builder.Build();
 
 app.UseCommonApi();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwaggerUI(options =>
+    {
+        foreach (var (clusterId, name) in GatewayRoutes.ApiDocuments)
+        {
+            options.SwaggerEndpoint($"/openapi/{clusterId}.json", name);
+        }
+        options.EnablePersistAuthorization();
+    });
+}
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

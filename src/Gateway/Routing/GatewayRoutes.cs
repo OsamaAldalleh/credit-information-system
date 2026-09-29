@@ -7,6 +7,16 @@ namespace Gateway.Routing;
 // litigations legal-loans/ids) are deliberately absent, so they cannot be reached through the gateway.
 public static class GatewayRoutes
 {
+    // Cluster id -> name shown in Swagger UI. Each service's OpenAPI document is served at /openapi/{cluster id}.json.
+    public static IReadOnlyDictionary<string, string> ApiDocuments { get; } = new Dictionary<string, string>
+    {
+        ["auth"] = "Auth",
+        ["customers"] = "Customers",
+        ["loans"] = "Loans & Payments",
+        ["litigations"] = "Litigations",
+        ["credit-score"] = "Credit Score"
+    };
+
     public static IReadOnlyList<RouteConfig> Routes { get; } =
     [
         Route("login", "auth", "POST", "/api/auth/login", Anonymous, LoginRateLimit),
@@ -36,7 +46,9 @@ public static class GatewayRoutes
         Route("customer-litigations", "litigations", "GET", "/api/litigations/{civilId}", Everyone),
 
         Route("credit-score", "credit-score", "GET", "/api/credit-scores/{civilId}", Everyone),
-        Route("credit-score-history", "credit-score", "GET", "/api/credit-scores/{civilId}/history", Everyone)
+        Route("credit-score-history", "credit-score", "GET", "/api/credit-scores/{civilId}/history", Everyone),
+
+        .. ApiDocuments.Keys.Select(ApiDocumentRoute)
     ];
 
     public static IReadOnlyList<ClusterConfig> Clusters(IConfiguration configuration) =>
@@ -55,6 +67,15 @@ public static class GatewayRoutes
         AuthorizationPolicy = policy,
         RateLimiterPolicy = rateLimiterPolicy,
         Match = new RouteMatch { Path = path, Methods = [method] }
+    };
+
+    private static RouteConfig ApiDocumentRoute(string clusterId) => new()
+    {
+        RouteId = $"{clusterId}-openapi",
+        ClusterId = clusterId,
+        AuthorizationPolicy = Anonymous,
+        Match = new RouteMatch { Path = $"/openapi/{clusterId}.json", Methods = ["GET"] },
+        Transforms = [new Dictionary<string, string> { ["PathSet"] = "/openapi/v1.json" }]
     };
 
     private static ClusterConfig Cluster(string id, string? address) => new()

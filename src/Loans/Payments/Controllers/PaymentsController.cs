@@ -12,6 +12,7 @@ namespace Loans.Payments.Controllers;
 public class PaymentsController(PaymentsService paymentsService) : ControllerBase
 {
     [HttpPost("{loanId}")]
+    [EndpointDescription("Adds 1 to 1000 payments to the loan. Payments settle the oldest unpaid installments first. payment_reference must be unique within the bank.")]
     public async Task<ActionResult<ApiResponse<object>>> UploadPayments(
     Guid loanId,
     [FromBody, Required, MinLength(1), MaxLength(1000)]
@@ -32,6 +33,7 @@ public class PaymentsController(PaymentsService paymentsService) : ControllerBas
     }
 
     [HttpGet("reference/{paymentReference}")]
+    [EndpointDescription("Bank users only find their own bank's payments. References are unique per bank, so for bureau users the latest match is returned.")]
     public async Task<ActionResult<ApiResponse<LoanPaymentPayload>>> GetPaymentByReference(
         [Required, StringLength(64)] string paymentReference)
     {

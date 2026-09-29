@@ -18,7 +18,7 @@ builder.Services.AddDbContext<AuthDbContext>(options => options
         AuthSeeder.Seed((AuthDbContext)context, builder.Configuration.GetValue<bool>("SeedData:Enabled"))));
 
 builder.Services.AddCommonApi();
-builder.Services.AddOpenApi();
+builder.Services.AddCommonOpenApi();
 
 var privateKeyPath = builder.Configuration["Jwt:PrivateKeyPath"]
     ?? throw new InvalidOperationException("Jwt:PrivateKeyPath is not configured");

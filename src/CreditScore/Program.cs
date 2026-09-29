@@ -20,7 +20,7 @@ builder.Services.AddDbContext<CreditScoreDbContext>(options => options
     .UseExceptionProcessor());
 
 builder.Services.AddCommonApi();
-builder.Services.AddOpenApi();
+builder.Services.AddCommonOpenApi();
 
 builder.Services.AddScoped<CreditScoresService>();
 

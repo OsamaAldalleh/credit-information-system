@@ -22,7 +22,7 @@ builder.Services.AddDbContext<CustomersDbContext>(options => options
 
 builder.Services.AddCommonApi();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddCommonOpenApi();
 
 builder.Services.AddScoped<CustomersService>();
 

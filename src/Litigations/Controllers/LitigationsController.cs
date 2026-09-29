@@ -23,6 +23,7 @@ public class LitigationsController(LitigationsService litigationsService) : Cont
     }
 
     [HttpPatch("cases/{litigationId}/status")]
+    [EndpointDescription("Records the verdict (GUILTY or INNOCENT) and its date. A loan can have only one GUILTY case.")]
     public async Task<ActionResult<ApiResponse<LitigationPayload>>> UpdateLitigationStatus(
         Guid litigationId,
         UpdateLitigationStatusPayload payload)
@@ -54,6 +55,7 @@ public class LitigationsController(LitigationsService litigationsService) : Cont
 
     // Internal: used by the Loans service, never mapped in the gateway.
     [HttpGet("{civilId}/legal-loans/ids")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<Guid>>>> GetLegalLoanIds(
         [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId)
     {
