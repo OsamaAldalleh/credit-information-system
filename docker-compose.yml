@@ -39,6 +39,7 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       ConnectionStrings__LoansDb: Host=postgres;Port=5432;Database=loans;Username=cis;Password=cis_dev_password
       Services__Customers__BaseUrl: http://customers:8080
+      Services__Litigations__BaseUrl: http://litigations:8080
       SeedData__Enabled: "${SEED_DATA_ENABLED:-true}"
     ports:
       - "${LOANS_PORT:-5102}:8080"
@@ -47,6 +48,23 @@ services:
         condition: service_healthy
       customers:
         condition: service_started
+
+  # Loans and Litigations call each other only per request, so neither waits for the other at startup
+  # (depends_on in both directions would be a cycle compose refuses).
+  litigations:
+    build:
+      context: .
+      dockerfile: src/Litigations/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__LitigationsDb: Host=postgres;Port=5432;Database=litigations;Username=cis;Password=cis_dev_password
+      Services__Loans__BaseUrl: http://loans:8080
+    ports:
+      - "${LITIGATIONS_PORT:-5103}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres-data:
