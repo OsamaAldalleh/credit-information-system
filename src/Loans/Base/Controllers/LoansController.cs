@@ -28,7 +28,7 @@ public class LoansController(LoansService loansService) : ControllerBase
 
     [HttpGet("{civilId}")]
     public async Task<ActionResult<ApiResponse<PageResult<LoanPayload>>>> GetCustomerLoans(
-        string civilId,
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId,
         [FromQuery, EnumDataType(typeof(LoanStatus))] LoanStatus? loanStatus = null,
         [FromQuery, Range(0, int.MaxValue)] int page = 0,
         [FromQuery, Range(1, 100)] int pageSize = 20)
@@ -36,14 +36,24 @@ public class LoansController(LoansService loansService) : ControllerBase
         return ApiResponseBuilder.Ok(await loansService.GetCustomerLoansAsync(civilId, loanStatus, page, pageSize));
     }
 
+    [HttpGet("{civilId}/total")]
+    public async Task<ActionResult<ApiResponse<TotalCustomerLoansAmountPayload>>> GetCustomerTotalLoansAmount(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId,
+        [FromQuery, EnumDataType(typeof(LoanStatus))] LoanStatus? loanStatus = LoanStatus.Open)
+    {
+        return ApiResponseBuilder.Ok(await loansService.GetCustomerTotalLoansAmountAsync(civilId, loanStatus));
+    }
+
     [HttpGet("{civilId}/delinquent")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<DelinquentLoanPayload>>>> GetDelinquentLoans(string civilId)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<DelinquentLoanPayload>>>> GetDelinquentLoans(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId)
     {
         return ApiResponseBuilder.Ok(await loansService.GetDelinquentLoansAsync(civilId));
     }
 
     [HttpGet("{civilId}/next-payment")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<NextPaymentPayload>>>> GetNextPayments(string civilId)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<NextPaymentPayload>>>> GetNextPayments(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId)
     {
         return ApiResponseBuilder.Ok(await loansService.GetNextPaymentsAsync(civilId));
     }

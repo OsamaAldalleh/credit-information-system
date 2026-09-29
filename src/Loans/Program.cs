@@ -5,6 +5,7 @@ using EntityFramework.Exceptions.PostgreSQL;
 using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
 using Loans.Payments.Services;
+using Loans.Base.Clients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,13 @@ builder.Services.AddDbContext<LoansDbContext>(options => options
             LoansSeeder.Seed((LoansDbContext)context);
         }
     }));
+
+builder.Services.AddHttpClient<LitigationsClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:Litigations:BaseUrl"]
+        ?? throw new InvalidOperationException("Services:Litigations:BaseUrl is not configured"));
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 builder.Services.AddScoped<PaymentsService>();
 builder.Services.AddCommonApi();

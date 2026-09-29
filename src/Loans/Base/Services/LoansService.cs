@@ -1,6 +1,7 @@
 using Common.Api.Responses;
 using Common.Exceptions;
 using EntityFramework.Exceptions.Common;
+using Loans.Base.Clients;
 using Loans.Base.Errors;
 using Loans.Base.Mappers;
 using Loans.Base.Models;
@@ -8,11 +9,10 @@ using Loans.Base.Payloads;
 using Loans.Common.Clients.Customers;
 using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace Loans.Base.Services;
 
-public class LoansService(LoansDbContext loansDb, CustomersClient customersClient)
+public class LoansService(LoansDbContext loansDb, CustomersClient customersClient, LitigationsClient litigationsClient)
 {
 
     public async Task<LoanPayload> CreateLoanAsync(CreateLoanPayload payload)
@@ -96,6 +96,29 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
             Page = page,
             Size = pageSize,
             TotalElements = totalElements
+        };
+    }
+
+    public async Task<TotalCustomerLoansAmountPayload> GetCustomerTotalLoansAmountAsync(string civilId, LoanStatus? status)
+    {
+        var legalLoanIds = await litigationsClient.GetLegalLoanIdsAsync(civilId) ?? [];
+        
+        var query = loansDb.Loans
+            .AsNoTracking()
+            .Where(l => l.CivilId == civilId)
+            .Where(l => !legalLoanIds.Contains(l.Id));
+        if(status is not null)
+        {
+            query = query.Where(l => l.Status == status);
+        }
+
+        var sum = await query
+            .Select(l => l.Amount)
+            .SumAsync();
+
+        return new() 
+        {
+            TotalLoansAmount = sum
         };
     }
 
