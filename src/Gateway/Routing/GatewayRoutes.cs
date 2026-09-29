@@ -19,18 +19,18 @@ public static class GatewayRoutes
         Route("update-loan-eligibility", "customers", "PATCH", "/api/customers/{civilId}/loan-eligibility", BureauAdmin),
         Route("loan-eligibility-history", "customers", "GET", "/api/customers/{civilId}/loan-eligibility/history", Bureau),
 
-        Route("create-loan", "loans", "POST", "/api/loans", Writers),
-        Route("close-loan", "loans", "PATCH", "/api/loans/{loanId}/close", Writers),
+        Route("create-loan", "loans", "POST", "/api/loans", BankOfficers),
+        Route("close-loan", "loans", "PATCH", "/api/loans/{loanId}/close", BankOfficers),
         Route("get-loans", "loans", "GET", "/api/loans/{loanIdOrCivilId}", Everyone),
         Route("customer-loans-total", "loans", "GET", "/api/loans/{civilId}/total", Everyone),
         Route("delinquent-loans", "loans", "GET", "/api/loans/{civilId}/delinquent", Everyone),
         Route("next-payment", "loans", "GET", "/api/loans/{civilId}/next-payment", Everyone),
 
-        Route("upload-payments", "loans", "POST", "/api/payments/{loanId}", Writers),
+        Route("upload-payments", "loans", "POST", "/api/payments/{loanId}", BankOfficers),
         Route("read-payments", "loans", "GET", "/api/payments/{**path}", Everyone),
 
-        Route("create-litigation", "litigations", "POST", "/api/litigations", Writers),
-        Route("update-litigation-status", "litigations", "PATCH", "/api/litigations/cases/{litigationId}/status", Writers),
+        Route("create-litigation", "litigations", "POST", "/api/litigations", BankOfficers),
+        Route("update-litigation-status", "litigations", "PATCH", "/api/litigations/cases/{litigationId}/status", BankOfficers),
         Route("get-litigation", "litigations", "GET", "/api/litigations/cases/{litigationId}", Everyone),
         Route("loan-litigations", "litigations", "GET", "/api/litigations/loan/{loanId}", Everyone),
         Route("customer-litigations", "litigations", "GET", "/api/litigations/{civilId}", Everyone),

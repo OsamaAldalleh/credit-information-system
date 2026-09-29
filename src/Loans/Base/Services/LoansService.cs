@@ -1,5 +1,6 @@
 using Common.Api.Responses;
 using Common.Exceptions;
+using Common.Exceptions.Errors;
 using EntityFramework.Exceptions.Common;
 using Loans.Base.Clients;
 using Loans.Base.Errors;
@@ -30,10 +31,7 @@ public class LoansService(
             throw ServiceException.ValidationFailed(
                 [new ValidationError("first_due_date", "first_due_date should be at or after start_date")]);
         }
-        var institutionId = currentUser.IsScopedToInstitution
-            ? currentUser.InstitutionId!.Value
-            : payload.InstitutionId ?? throw ServiceException.ValidationFailed(
-                [new ValidationError("institution_id", "institution_id is required for bureau users")]);
+        var institutionId = currentUser.InstitutionId ?? throw ServiceException.Unauthorized(GenericErrors.Unauthorized);
 
         var customer = await customersClient.GetCustomerAsync(payload.CivilId!)
             ?? throw ServiceException.BadRequest(LoanErrors.CustomerNotFound, payload.CivilId);
