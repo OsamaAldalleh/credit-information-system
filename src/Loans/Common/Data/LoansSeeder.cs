@@ -12,7 +12,7 @@ public static class LoansSeeder
 
     public static void Seed(LoansDbContext db)
     {
-        var today = LoanScheduleCalculator.KuwaitToday();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var loans = new List<Loan>();
         var payments = new List<LoanPayment>();
 
@@ -76,7 +76,7 @@ public static class LoansSeeder
     private static Loan AddLoan(List<Loan> loans, List<LoanPayment> payments, int number, int customerNumber, string reference, DateOnly firstDueDate,
             int tenor, PaymentFrequency frequency, params decimal[] amounts)
         {
-            var today = LoanScheduleCalculator.KuwaitToday();
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var startDate = firstDueDate < today ? firstDueDate.AddDays(-7) : today.AddDays(-7);
             var loan = new Loan
             {

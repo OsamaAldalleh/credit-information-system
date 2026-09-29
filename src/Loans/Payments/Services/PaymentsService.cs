@@ -8,10 +8,12 @@ using Loans.Payments.Mappers;
 using Loans.Payments.Models;
 using Loans.Payments.Payloads;
 using Microsoft.EntityFrameworkCore;
+using Common.Contracts;
+using MassTransit;
 
 namespace Loans.Payments.Services;
 
-public class PaymentsService(LoansDbContext loansDb)
+public class PaymentsService(LoansDbContext loansDb, IPublishEndpoint publishEndpoint)
 {
     public async Task UploadPaymentsAsync(Guid loanId, IReadOnlyList<UploadLoanPaymentPayload> payments)
     {
@@ -32,6 +34,8 @@ public class PaymentsService(LoansDbContext loansDb)
         }
 
         loansDb.LoanPayments.AddRange(payments.Select(p => p.ToEntity(loan)));
+        await publishEndpoint.Publish(
+            new CustomerCreditDataChanged(loan.CivilId, CreditDataChangeReason.PaymentsReceived, DateTimeOffset.UtcNow));
         try
         {
             await loansDb.SaveChangesAsync();

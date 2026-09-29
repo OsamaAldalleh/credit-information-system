@@ -6,6 +6,8 @@ using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
 using Loans.Payments.Services;
 using Loans.Base.Clients;
+using Common.Messaging;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +35,15 @@ builder.Services.AddCommonApi();
 builder.Services.AddOpenApi();
 
 builder.Services.AddScoped<LoansService>();
+
+builder.Services.AddCommonMessaging(builder.Configuration, x =>
+{
+    x.AddEntityFrameworkOutbox<LoansDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+});
 
 builder.Services.AddHttpClient<CustomersClient>(client =>
 {

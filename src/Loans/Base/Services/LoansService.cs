@@ -9,10 +9,16 @@ using Loans.Base.Payloads;
 using Loans.Common.Clients.Customers;
 using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
+using Common.Contracts;
+using MassTransit;
 
 namespace Loans.Base.Services;
 
-public class LoansService(LoansDbContext loansDb, CustomersClient customersClient, LitigationsClient litigationsClient)
+public class LoansService(
+    LoansDbContext loansDb,
+    CustomersClient customersClient,
+    LitigationsClient litigationsClient,
+    IPublishEndpoint publishEndpoint)
 {
 
     public async Task<LoanPayload> CreateLoanAsync(CreateLoanPayload payload)
@@ -33,6 +39,8 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
         // todo: get institution id from headers
         var loan = payload.ToEntity(Guid.CreateVersion7());
         loansDb.Loans.Add(loan);
+        await publishEndpoint.Publish(
+            new CustomerCreditDataChanged(loan.CivilId, CreditDataChangeReason.LoanCreated, DateTimeOffset.UtcNow));
 
         try
         {
@@ -124,7 +132,7 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
 
     public async Task<IReadOnlyList<DelinquentLoanPayload>> GetDelinquentLoansAsync(string civilId)
     {
-        var today = LoanScheduleCalculator.KuwaitToday();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var loans = await loansDb.Loans
             .AsNoTracking()
@@ -152,7 +160,7 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
 
     public async Task<IReadOnlyList<NextPaymentPayload>> GetNextPaymentsAsync(string civilId)
     {
-        var today = LoanScheduleCalculator.KuwaitToday();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var loans = await loansDb.Loans
             .AsNoTracking()
@@ -174,6 +182,28 @@ public class LoansService(LoansDbContext loansDb, CustomersClient customersClien
                 NextDueDate = l.Standing.NextDueDate,
                 NextInstallmentAmount = l.Standing.NextInstallmentAmount,
                 TotalDueByNextDate = l.Standing.TotalDueByNextDate
+            })
+            .ToList();
+    }
+
+    // Closed loans are included: a loan closed with money still owed (e.g. written off) still counts as delinquent.
+    public async Task<IReadOnlyList<LoanCreditSummaryPayload>> GetCreditSummaryAsync(string civilId)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var loans = await loansDb.Loans
+            .AsNoTracking()
+            .Where(l => l.CivilId == civilId)
+            .Select(l => new { Loan = l, Paid = loansDb.LoanPayments.Where(p => p.LoanId == l.Id).Sum(p => p.Amount) })
+            .ToListAsync();
+
+        return loans
+            .Select(l => new LoanCreditSummaryPayload
+            {
+                LoanId = l.Loan.Id,
+                Amount = l.Loan.Amount,
+                Status = l.Loan.Status,
+                OverdueInstallments = LoanScheduleCalculator.Calculate(l.Loan, l.Paid, today).OverdueInstallments
             })
             .ToList();
     }

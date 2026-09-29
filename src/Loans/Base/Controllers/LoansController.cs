@@ -57,4 +57,12 @@ public class LoansController(LoansService loansService) : ControllerBase
     {
         return ApiResponseBuilder.Ok(await loansService.GetNextPaymentsAsync(civilId));
     }
+
+    // Internal: used by the CreditScore service, never mapped in the gateway.
+    [HttpGet("{civilId}/credit-summary")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<LoanCreditSummaryPayload>>>> GetCreditSummary(
+        [RegularExpression(@"^\d{12}$", ErrorMessage = "civil_id must be exactly 12 digits")] string civilId)
+    {
+        return ApiResponseBuilder.Ok(await loansService.GetCreditSummaryAsync(civilId));
+    }
 }

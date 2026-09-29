@@ -8,11 +8,6 @@ public static class LoanScheduleCalculator
 {
     public const int DelinquencyThresholdDays = 1;
 
-    private static readonly TimeSpan KuwaitOffset = TimeSpan.FromHours(3);
-
-    public static DateOnly KuwaitToday() =>
-        DateOnly.FromDateTime(DateTimeOffset.UtcNow.ToOffset(KuwaitOffset).DateTime);
-
     public static DateOnly DueDate(Loan loan, int installmentIndex) => loan.PaymentFrequency switch
     {
         PaymentFrequency.Weekly => loan.FirstDueDate.AddDays(7 * installmentIndex),
