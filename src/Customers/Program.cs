@@ -11,7 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<CustomersDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("CustomersDb"))
     .UseSnakeCaseNamingConvention()
-    .UseExceptionProcessor());
+    .UseExceptionProcessor()
+    .UseSeeding((context, _) =>
+    {
+        if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
+        {
+            CustomersSeeder.Seed((CustomersDbContext)context);
+        }
+    }));
 
 builder.Services.AddCommonApi();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

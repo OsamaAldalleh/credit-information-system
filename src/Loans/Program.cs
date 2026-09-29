@@ -11,7 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<LoansDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("LoansDb"))
     .UseSnakeCaseNamingConvention()
-    .UseExceptionProcessor());
+    .UseExceptionProcessor()
+    .UseSeeding((context, _) =>
+    {
+        if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
+        {
+            LoansSeeder.Seed((LoansDbContext)context);
+        }
+    }));
 
 builder.Services.AddScoped<PaymentsService>();
 builder.Services.AddCommonApi();

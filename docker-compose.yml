@@ -1,20 +1,52 @@
 services:
   postgres:
     image: postgres:18
-    container_name: cis-postgres
     environment:
       POSTGRES_USER: cis
       POSTGRES_PASSWORD: cis_dev_password
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cis"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U cis -d loans"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  customers:
+    build:
+      context: .
+      dockerfile: src/Customers/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__CustomersDb: Host=postgres;Port=5432;Database=customers;Username=cis;Password=cis_dev_password
+      SeedData__Enabled: "${SEED_DATA_ENABLED:-true}"
+    ports:
+      - "${CUSTOMERS_PORT:-5101}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  loans:
+    build:
+      context: .
+      dockerfile: src/Loans/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__LoansDb: Host=postgres;Port=5432;Database=loans;Username=cis;Password=cis_dev_password
+      Services__Customers__BaseUrl: http://customers:8080
+      SeedData__Enabled: "${SEED_DATA_ENABLED:-true}"
+    ports:
+      - "${LOANS_PORT:-5102}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      customers:
+        condition: service_started
 
 volumes:
   postgres-data:
