@@ -10,17 +10,27 @@ using Litigations.Models;
 using Litigations.Payloads;
 using Microsoft.EntityFrameworkCore;
 using Common.Contracts;
+using Common.Security;
 using MassTransit;
 
 namespace Litigations.Services;
 
-public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient loansClient, IPublishEndpoint publishEndpoint)
+public class LitigationsService(
+    LitigationsDbContext litigationsDb,
+    LoansClient loansClient,
+    IPublishEndpoint publishEndpoint,
+    CurrentUser currentUser)
 {
     public async Task<LitigationPayload> CreateLitigationAsync(CreateLitigationPayload payload)
     {
         ValidateLitigation(payload.Status, payload.FiledDate, payload.VerdictDate);
         var loan = await loansClient.GetLoanAsync(payload.LoanId!.Value)
             ?? throw ServiceException.BadRequest(LitigationErrors.LoanNotFound, payload.LoanId);
+
+        if (currentUser.IsScopedToInstitution && loan.InstitutionId != currentUser.InstitutionId)
+        {
+            throw ServiceException.Forbidden(LitigationErrors.LoanOfAnotherInstitution, loan.Id);
+        }
 
         var hasGuiltyVerdict = await litigationsDb.Litigations
             .AnyAsync(l => l.LoanId == loan.Id && l.Status == LitigationStatus.Guilty);
@@ -56,6 +66,10 @@ public class LitigationsService(LitigationsDbContext litigationsDb, LoansClient 
         if (litigation is null)
         {
             throw ServiceException.NotFound(LitigationErrors.LitigationNotFound, litigationId);
+        }
+        if (currentUser.IsScopedToInstitution && litigation.InstitutionId != currentUser.InstitutionId)
+        {
+            throw ServiceException.Forbidden(LitigationErrors.LoanOfAnotherInstitution, litigation.LoanId);
         }
         if (litigation.Status != LitigationStatus.Pending)
         {

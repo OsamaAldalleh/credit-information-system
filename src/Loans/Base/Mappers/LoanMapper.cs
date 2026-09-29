@@ -1,3 +1,4 @@
+using Common.Security;
 using Loans.Base.Models;
 using Loans.Base.Payloads;
 
@@ -5,7 +6,30 @@ namespace Loans.Base.Mappers;
 
 public static class LoanMapper
 {
-    // todo: map institution id to "Other Banks" when a bank is querying loans of not its own
+    private const string OtherBanks = "OTHER_BANKS";
+
+    // Bank users see other banks' loans without learning which bank holds them.
+    public static LoanPayload ToPayload(this Loan loan, CurrentUser currentUser)
+    {
+        var payload = loan.ToPayload();
+        if (!currentUser.IsScopedToInstitution)
+        {
+            return payload;
+        }
+
+        if (loan.InstitutionId == currentUser.InstitutionId)
+        {
+            payload.InstitutionName = currentUser.InstitutionName;
+        }
+        else
+        {
+            payload.InstitutionId = null;
+            payload.InstitutionName = OtherBanks;
+        }
+
+        return payload;
+    }
+
     public static LoanPayload ToPayload(this Loan loan) => new()
     {
         Id = loan.Id,
@@ -25,8 +49,6 @@ public static class LoanMapper
         ClosedAt = loan.ClosedAt
     };
 
-    // Payload fields are non-null here: [Required] rejects the request before it reaches the service.
-    // The institution comes from the caller's identity, never from the request body.
     public static Loan ToEntity(this CreateLoanPayload payload, Guid institutionId) => new()
     {
         Id = Guid.CreateVersion7(),

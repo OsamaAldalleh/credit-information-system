@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Common.Exceptions.Handlers;
+using Common.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
@@ -28,6 +29,9 @@ public static class CommonApiExtensions
 
         // The exception handlers write JSON outside MVC, which uses these separate options.
         services.ConfigureHttpJsonOptions(options => ApiJson.Configure(options.SerializerOptions));
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<CurrentUser>();
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         // UseExceptionHandler() refuses to start without it; our handler writes the response, so its output is never used.

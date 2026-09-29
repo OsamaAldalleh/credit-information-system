@@ -10,4 +10,5 @@ public static class LitigationErrors
     public static readonly ServiceError LoanAlreadyHasGuiltyVerdict = new("LIT-1003", "Loan {0} already has a GUILTY verdict");
     public static readonly ServiceError VerdictAlreadyRecorded = new("LIT-1004", "Litigation case {0} already has a verdict");
     public static readonly ServiceError LoansServiceUnavailable = new("LIT-1005", "Loan information is currently unavailable, try again later");
+    public static readonly ServiceError LoanOfAnotherInstitution = new("LIT-1006", "Loan {0} belongs to another institution");
 }

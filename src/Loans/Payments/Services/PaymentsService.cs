@@ -9,11 +9,12 @@ using Loans.Payments.Models;
 using Loans.Payments.Payloads;
 using Microsoft.EntityFrameworkCore;
 using Common.Contracts;
+using Common.Security;
 using MassTransit;
 
 namespace Loans.Payments.Services;
 
-public class PaymentsService(LoansDbContext loansDb, IPublishEndpoint publishEndpoint)
+public class PaymentsService(LoansDbContext loansDb, IPublishEndpoint publishEndpoint, CurrentUser currentUser)
 {
     public async Task UploadPaymentsAsync(Guid loanId, IReadOnlyList<UploadLoanPaymentPayload> payments)
     {
@@ -27,6 +28,10 @@ public class PaymentsService(LoansDbContext loansDb, IPublishEndpoint publishEnd
         if(loan is null)
         {
             throw ServiceException.BadRequest(PaymentErrors.LoanNotFound, loanId);
+        }
+        if (currentUser.IsScopedToInstitution && loan.InstitutionId != currentUser.InstitutionId)
+        {
+            throw ServiceException.Forbidden(PaymentErrors.LoanOfAnotherInstitution, loanId);
         }
         if(LoanStatus.Closed.Equals(loan.Status))
         {
@@ -57,13 +62,19 @@ public class PaymentsService(LoansDbContext loansDb, IPublishEndpoint publishEnd
 
     public async Task<LoanPaymentPayload> GetPaymentByReferenceAsync(string paymentReference)
     {
-        // todo: filter by the authenticated user's institution id once JWT claims are available.
-        var instId = Guid.CreateVersion7();
-        var payment = await loansDb.LoanPayments
+        var query = loansDb.LoanPayments
             .AsNoTracking()
-            .Where(p => p.PaymentReference == paymentReference)
-            .Where(p => p.InstitutionId == instId)
-            .SingleOrDefaultAsync();
+            .Where(p => p.PaymentReference == paymentReference);
+
+        if (currentUser.IsScopedToInstitution)
+        {
+            query = query.Where(p => p.InstitutionId == currentUser.InstitutionId);
+        }
+
+        // References are only unique per institution, so a bureau lookup can match several; the latest is returned.
+        var payment = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync();
 
         if (payment is null)
         {

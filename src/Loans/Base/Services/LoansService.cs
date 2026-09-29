@@ -10,6 +10,7 @@ using Loans.Common.Clients.Customers;
 using Loans.Common.Data;
 using Microsoft.EntityFrameworkCore;
 using Common.Contracts;
+using Common.Security;
 using MassTransit;
 
 namespace Loans.Base.Services;
@@ -18,7 +19,8 @@ public class LoansService(
     LoansDbContext loansDb,
     CustomersClient customersClient,
     LitigationsClient litigationsClient,
-    IPublishEndpoint publishEndpoint)
+    IPublishEndpoint publishEndpoint,
+    CurrentUser currentUser)
 {
 
     public async Task<LoanPayload> CreateLoanAsync(CreateLoanPayload payload)
@@ -28,6 +30,11 @@ public class LoansService(
             throw ServiceException.ValidationFailed(
                 [new ValidationError("first_due_date", "first_due_date should be at or after start_date")]);
         }
+        var institutionId = currentUser.IsScopedToInstitution
+            ? currentUser.InstitutionId!.Value
+            : payload.InstitutionId ?? throw ServiceException.ValidationFailed(
+                [new ValidationError("institution_id", "institution_id is required for bureau users")]);
+
         var customer = await customersClient.GetCustomerAsync(payload.CivilId!)
             ?? throw ServiceException.BadRequest(LoanErrors.CustomerNotFound, payload.CivilId);
 
@@ -36,8 +43,7 @@ public class LoansService(
             throw ServiceException.BadRequest(LoanErrors.CustomerNotEligible, payload.CivilId);
         }
 
-        // todo: get institution id from headers
-        var loan = payload.ToEntity(Guid.CreateVersion7());
+        var loan = payload.ToEntity(institutionId);
         loansDb.Loans.Add(loan);
         await publishEndpoint.Publish(
             new CustomerCreditDataChanged(loan.CivilId, CreditDataChangeReason.LoanCreated, DateTimeOffset.UtcNow));
@@ -57,7 +63,7 @@ public class LoansService(
                 .WithDetails(new { ExistingLoanId = existingId });
         }
 
-        return loan.ToPayload();
+        return loan.ToPayload(currentUser);
     }
 
     public async Task<LoanPayload> GetLoanAsync(Guid loanId)
@@ -65,7 +71,7 @@ public class LoansService(
         var loan = await loansDb.Loans.FindAsync(loanId)
             ?? throw ServiceException.NotFound(LoanErrors.LoanNotFound, loanId);
 
-        return loan.ToPayload();
+        return loan.ToPayload(currentUser);
     }
 
     public async Task<LoanPayload> CloseLoanAsync(Guid loanId, CloseLoanPayload payload)
@@ -73,6 +79,10 @@ public class LoansService(
         var loan = await loansDb.Loans.FindAsync(loanId)
             ?? throw ServiceException.NotFound(LoanErrors.LoanNotFound, loanId);
 
+        if (currentUser.IsScopedToInstitution && loan.InstitutionId != currentUser.InstitutionId)
+        {
+            throw ServiceException.Forbidden(LoanErrors.LoanOfAnotherInstitution, loanId);
+        }
         if (loan.Status == LoanStatus.Closed)
         {
             throw ServiceException.BadRequest(LoanErrors.LoanAlreadyClosed, loanId);
@@ -85,11 +95,9 @@ public class LoansService(
             new CustomerCreditDataChanged(loan.CivilId, CreditDataChangeReason.LoanClosed, DateTimeOffset.UtcNow));
         await loansDb.SaveChangesAsync();
 
-        return loan.ToPayload();
+        return loan.ToPayload(currentUser);
     }
 
-    // todo: once auth is done, non-bureau callers see InstitutionId only for their own institution's loans;
-    //       every other loan's institution is reported as OTHER_BANKS.
     public async Task<PageResult<LoanPayload>> GetCustomerLoansAsync(string civilId, LoanStatus? status, int page, int pageSize)
     {
         var offset = (long)page * pageSize;
@@ -120,7 +128,7 @@ public class LoansService(
 
         return new PageResult<LoanPayload>
         {
-            Content = loans.Select(l => l.ToPayload()).ToList(),
+            Content = loans.Select(l => l.ToPayload(currentUser)).ToList(),
             Page = page,
             Size = pageSize,
             TotalElements = totalElements

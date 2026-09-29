@@ -14,6 +14,7 @@ public static class GenericErrors
     public static readonly ServiceError UnsupportedMediaType = new("GEN-1007", "Unsupported content type, use application/json");
     public static readonly ServiceError RequestTooLarge = new("GEN-1008", "The request body is too large");
     public static readonly ServiceError RequestFailed = new("GEN-1009", "The request could not be processed");
+    public static readonly ServiceError TooManyRequests = new("GEN-1010", "Too many requests, try again later");
 
     internal static ServiceError FromStatusCode(int statusCode) => statusCode switch
     {
@@ -24,6 +25,7 @@ public static class GenericErrors
         StatusCodes.Status405MethodNotAllowed => MethodNotAllowed,
         StatusCodes.Status413PayloadTooLarge => RequestTooLarge,
         StatusCodes.Status415UnsupportedMediaType => UnsupportedMediaType,
+        StatusCodes.Status429TooManyRequests => TooManyRequests,
         >= StatusCodes.Status500InternalServerError => InternalError,
         _ => RequestFailed
     };

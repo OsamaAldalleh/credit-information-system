@@ -9,4 +9,5 @@ public static class PaymentErrors
     public static readonly ServiceError DuplicatePaymentReference = new("PMNT-1002", "Processing Failed, one or more payment references are duplicate");
     public static readonly ServiceError PaymentNotFound = new("PMNT-1003", "Payment {0} is not found");
     public static readonly ServiceError PaymentReferenceNotFound = new("PMNT-1004", "Payment reference {0} is not found");
+    public static readonly ServiceError LoanOfAnotherInstitution = new("PMNT-1005", "Could not process payments as Loan {0} belongs to another institution");
 }

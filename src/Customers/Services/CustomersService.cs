@@ -1,5 +1,7 @@
 using Common.Api.Responses;
 using Common.Exceptions;
+using Common.Exceptions.Errors;
+using Common.Security;
 using Customers.Data;
 using Customers.Errors;
 using Customers.Mappers;
@@ -10,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Customers.Services;
 
-public class CustomersService(CustomersDbContext customersDb)
+public class CustomersService(CustomersDbContext customersDb, CurrentUser currentUser)
 {
 
     public async Task<CustomerPayload> CreateCustomerAsync(CustomerPayload customerPayload)
@@ -51,17 +53,17 @@ public class CustomersService(CustomersDbContext customersDb)
             return customer.ToPayload();
         }
 
+        var changedBy = currentUser.UserId ?? throw ServiceException.Unauthorized(GenericErrors.Unauthorized);
         var now = DateTimeOffset.UtcNow;
         customer.LoanEligibility = payload.LoanEligibility!.Value;
         customer.UpdatedAt = now;
-        // todo: put user id from jwt claims
         CustomerLoanEligibilityHistory history = new()
         {
             Id = Guid.CreateVersion7(),
             CivilId = customer.CivilId,
             LoanEligibility = payload.LoanEligibility!.Value,
             Reason = payload.Reason,
-            ChangedBy = Guid.CreateVersion7(),
+            ChangedBy = changedBy,
             CreatedAt = now,
         };
         customersDb.CustomerLoanEligibilityHistory.Add(history);
@@ -69,7 +71,6 @@ public class CustomersService(CustomersDbContext customersDb)
         return customer.ToPayload();
     }
 
-    // todo: map changedBy only for admin role & self changedBy.
     public async Task<CustomerLoanEligibilityHistoryResponse> GetLoanEligibilityHistoryAsync(
         string civilId,
         int page,

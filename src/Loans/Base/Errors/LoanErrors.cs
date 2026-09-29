@@ -11,5 +11,6 @@ public static class LoanErrors
     public static readonly ServiceError LoanAlreadyExists = new("LOAN-1004", "Loan with external reference {0} already exists");
     public static readonly ServiceError LoanNotFound = new("LOAN-1005", "Loan {0} is not found");
     public static readonly ServiceError LoanAlreadyClosed = new("LOAN-1006", "Loan {0} is already closed");
+    public static readonly ServiceError LoanOfAnotherInstitution = new("LOAN-1007", "Loan {0} belongs to another institution");
 
 }

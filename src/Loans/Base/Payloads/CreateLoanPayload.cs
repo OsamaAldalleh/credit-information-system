@@ -36,4 +36,7 @@ public class CreateLoanPayload
     [Required]
     [EnumDataType(typeof(PaymentFrequency))]
     public PaymentFrequency? PaymentFrequency { get; set; }
+
+    // Only read for bureau users; bank users always create loans for their own institution.
+    public Guid? InstitutionId { get; set; }
 }
